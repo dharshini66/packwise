@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum JourneyType {
+  CITY_BREAK
+  BEACH_ESCAPE
+  BUSINESS
+  ADVENTURE
+  INTERNATIONAL
+  FAMILY
+  CUSTOM
+}
+
+enum ItemCategory {
+  CLOTHING
+  ELECTRONICS
+  TOILETRIES
+  DOCUMENTS
+  MEDICINE
+  ACCESSORIES
+  OTHER
+}
+
+model User {
+  id           String    @id @default(cuid())
+  name         String
+  email        String    @unique
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  journeys     Journey[] 
+  blueprints   Blueprint[]
+}
+
+model Journey {
+  id          String       @id @default(cuid())
+  title       String
+  destination String
+  type        JourneyType  @default(CUSTOM)
+  departureAt DateTime
+  returnAt    DateTime?
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items       ManifestItem[]
+}
+
+model ManifestItem {
+  id        String       @id @default(cuid())
+  name      String
+  category  ItemCategory @default(OTHER)
+  quantity  Int          @default(1)
+  isStamped Boolean      @default(false)
+  journeyId String
+  journey   Journey      @relation(fields: [journeyId], references: [id], onDelete: Cascade)
+}
+
+model Blueprint {
+  id        String          @id @default(cuid())
+  name      String
+  type      JourneyType     @default(CUSTOM)
+  createdAt DateTime        @default(now())
+  userId    String?
+  user      User?           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  items     BlueprintItem[]
+}
+
+model BlueprintItem {
+  id          String       @id @default(cuid())
+  name        String
+  category    ItemCategory @default(OTHER)
+  quantity    Int          @default(1)
+  blueprintId String
+  blueprint   Blueprint    @relation(fields: [blueprintId], references: [id], onDelete: Cascade)
+}

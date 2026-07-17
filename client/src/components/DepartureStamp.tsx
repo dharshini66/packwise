@@ -1,0 +1,6 @@
+import { motion } from "framer-motion";
+import { Check } from "lucide-react";
+
+export default function DepartureStamp({ destination, onClose }: { destination: string; onClose: () => void }) {
+  return <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-50 grid place-items-center bg-[#102841]/80 p-5" onClick={onClose}><motion.div initial={{ scale: 2.2, rotate: -18, opacity: 0 }} animate={{ scale: 1, rotate: -8, opacity: 1 }} transition={{ type: "spring", damping: 10, stiffness: 150 }} onClick={(event) => event.stopPropagation()} className="stamp-card max-w-md rounded-xl border-[5px] border-[#8b1e3f] bg-[#f5f1e8] p-8 text-center text-[#8b1e3f]"><div className="mx-auto grid h-12 w-12 place-items-center rounded-full border-2 border-[#8b1e3f]"><Check /></div><p className="mt-5 text-xs font-bold uppercase tracking-[.3em]">Passport clearance</p><h2 className="mt-3 font-serif text-4xl font-bold leading-tight">READY FOR<br />DEPARTURE</h2><p className="mt-4 font-mono text-sm uppercase tracking-[.18em]">{destination}</p><button onClick={onClose} className="mt-8 rounded-full bg-[#8b1e3f] px-5 py-2.5 text-sm font-bold text-white">Continue to passport</button></motion.div></motion.div>;
+}
