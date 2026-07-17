@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { CalendarDays, CheckCircle2, CircleDot, MapPin, PlaneTakeoff } from "lucide-react";
 
 type Journey = { id: string; title: string; destination: string; type: string; departureAt: string; items: { id: string; isStamped: boolean }[] };
-const label = (type: string) => type.replaceAll("_", " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase());
+const label = (type: string) => type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (letter: string) => letter.toUpperCase());
 const airportCode = (destination: string) => destination.replace(/[^a-z]/gi, "").slice(0, 3).toUpperCase().padEnd(3, "TRP");
 
 export default function JourneyBoardingPass({ journey, index, onOpen }: { journey: Journey; index: number; onOpen: () => void }) {
