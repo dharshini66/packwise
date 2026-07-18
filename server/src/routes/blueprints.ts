@@ -7,6 +7,7 @@ import { requireAuth, type AuthRequest } from "../middleware/auth.js";
 const router = Router();
 const item = z.object({ name: z.string().trim().min(1).max(80), category: z.nativeEnum(ItemCategory).default(ItemCategory.OTHER), quantity: z.number().int().min(1).max(50).default(1) });
 const blueprintInput = z.object({ name: z.string().trim().min(2).max(60), type: z.nativeEnum(JourneyType), items: z.array(item).min(1).max(60) });
+const renameInput = z.object({ name: z.string().trim().min(2).max(60) });
 
 router.use(requireAuth);
 
@@ -23,10 +24,20 @@ router.post("/", async (req: AuthRequest, res) => {
 });
 
 router.post("/from-journey/:journeyId", async (req: AuthRequest, res) => {
+  const parsed = renameInput.partial().safeParse(req.body ?? {});
+  if (!parsed.success) return res.status(400).json({ message: "Give your blueprint a valid name." });
   const journey = await prisma.journey.findFirst({ where: { id: String(req.params.journeyId), userId: req.userId }, include: { items: true } });
   if (!journey) return res.status(404).json({ message: "Journey not found." });
   if (!journey.items.length) return res.status(400).json({ message: "Add at least one item before saving a blueprint." });
-  const blueprint = await prisma.blueprint.create({ data: { name: `${journey.title} Blueprint`, type: journey.type, userId: req.userId, items: { create: journey.items.map(({ name, category, quantity }) => ({ name, category, quantity })) } }, include: { items: true } });
+  const blueprint = await prisma.blueprint.create({
+    data: {
+      name: parsed.data.name?.trim() || `${journey.title} Blueprint`,
+      type: journey.type,
+      userId: req.userId,
+      items: { create: journey.items.map(({ name, category, quantity }) => ({ name, category, quantity })) },
+    },
+    include: { items: true },
+  });
   res.status(201).json({ blueprint });
 });
 
@@ -36,6 +47,18 @@ router.post("/:blueprintId/apply/:journeyId", async (req: AuthRequest, res) => {
   if (!blueprint || !journey) return res.status(404).json({ message: "Blueprint or journey not found." });
   await prisma.manifestItem.createMany({ data: blueprint.items.map(({ name, category, quantity }) => ({ name, category, quantity, journeyId: journey.id })), skipDuplicates: true });
   res.json({ message: `${blueprint.items.length} travel items added to your manifest.` });
+});
+
+router.patch("/:blueprintId", async (req: AuthRequest, res) => {
+  const parsed = renameInput.safeParse(req.body);
+  if (!parsed.success) return res.status(400).json({ message: "Give your blueprint a valid name." });
+  const result = await prisma.blueprint.updateMany({
+    where: { id: String(req.params.blueprintId), userId: req.userId },
+    data: { name: parsed.data.name },
+  });
+  if (!result.count) return res.status(404).json({ message: "Only your own blueprints can be renamed." });
+  const blueprint = await prisma.blueprint.findUnique({ where: { id: String(req.params.blueprintId) }, include: { items: true } });
+  res.json({ blueprint });
 });
 
 router.delete("/:blueprintId", async (req: AuthRequest, res) => {

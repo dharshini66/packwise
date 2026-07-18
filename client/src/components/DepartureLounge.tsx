@@ -1,9 +1,9 @@
-import WeatherDashboard, { type Weather } from "./WeatherDashboard";
 import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { BookOpen, Check, Compass, Moon, Plus, Trash2, X } from "lucide-react";
 import { request, type Traveler } from "../lib/api";
 import DepartureStamp from "./DepartureStamp";
+import WeatherDashboard, { type Weather } from "./WeatherDashboard";
 
 type Item = { id: string; name: string; isStamped: boolean; category?: string };
 type Journey = { id: string; title: string; destination: string; type: string; departureAt: string; returnAt?: string | null; items: Item[] };
@@ -67,8 +67,9 @@ export default function DepartureLounge({ traveler, onSignOut }: { traveler: Tra
 
   const createJourney = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault(); const form = new FormData(event.currentTarget);
+    const blueprintId = String(form.get("blueprintId") || "");
     try {
-      await request("/journeys", { method: "POST", headers: auth, body: JSON.stringify({ title: form.get("title"), destination: form.get("destination"), type: form.get("type"), departureAt: new Date(String(form.get("departureAt"))).toISOString(), returnAt: form.get("returnAt") ? new Date(String(form.get("returnAt"))).toISOString() : null }) });
+      await request("/journeys", { method: "POST", headers: auth, body: JSON.stringify({ title: form.get("title"), destination: form.get("destination"), type: form.get("type"), departureAt: new Date(String(form.get("departureAt"))).toISOString(), returnAt: form.get("returnAt") ? new Date(String(form.get("returnAt"))).toISOString() : null, blueprintId: blueprintId || undefined }) });
       setShowNew(false); setNotice("Journey added to the departure board."); await refresh();
     } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to create journey."); }
   };
@@ -102,6 +103,39 @@ export default function DepartureLounge({ traveler, onSignOut }: { traveler: Tra
     if (!selected || !window.confirm(`Remove “${selected.title}”? This cannot be undone.`)) return;
     await request(`/journeys/${selected.id}`, { method: "DELETE", headers: auth }); setSelected(null); await refresh();
   };
+  const saveBlueprint = async (journeyId: string) => {
+    const name = window.prompt("Name this blueprint:");
+    if (!name || !name.trim()) return;
+    try {
+      await request(`/blueprints/from-journey/${journeyId}`, { method: "POST", headers: auth, body: JSON.stringify({ name: name.trim() }) });
+      setNotice("Blueprint saved and ready for future journeys.");
+      await refresh();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to save blueprint."); }
+  };
+  const renameBlueprint = async (blueprint: Blueprint) => {
+    const name = window.prompt("Rename blueprint:", blueprint.name);
+    if (!name || !name.trim() || name.trim() === blueprint.name) return;
+    try {
+      const { blueprint: updated } = await request<{ blueprint: Blueprint }>(`/blueprints/${blueprint.id}`, { method: "PATCH", headers: auth, body: JSON.stringify({ name: name.trim() }) });
+      setBlueprints((prev) => prev.map((item) => (item.id === updated.id ? updated : item)));
+      setNotice("Blueprint renamed.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to rename blueprint."); }
+  };
+  const deleteBlueprint = async (blueprint: Blueprint) => {
+    if (!window.confirm(`Remove blueprint "${blueprint.name}"? This cannot be undone.`)) return;
+    try {
+      await request(`/blueprints/${blueprint.id}`, { method: "DELETE", headers: auth });
+      setBlueprints((prev) => prev.filter((item) => item.id !== blueprint.id));
+      setNotice("Blueprint removed.");
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to remove blueprint."); }
+  };
+  const applyBlueprint = async (blueprintId: string, journeyId: string) => {
+    try {
+      const result = await request<{ message: string }>(`/blueprints/${blueprintId}/apply/${journeyId}`, { method: "POST", headers: auth });
+      setNotice(result.message);
+      await refresh();
+    } catch (error) { setNotice(error instanceof Error ? error.message : "Unable to apply blueprint."); }
+  };
 
   return <div className="min-h-screen bg-[#f5f1e8] text-[#16345a]">
     <Header page={page} setPage={setPage} onNew={() => setShowNew(true)} onSignOut={onSignOut} />
@@ -111,10 +145,10 @@ export default function DepartureLounge({ traveler, onSignOut }: { traveler: Tra
       <section className="border-b border-[#d9cfbd] bg-[#f7f4ec]"><div className="mx-auto grid max-w-[1100px] grid-cols-2 gap-8 px-5 py-7 text-center sm:grid-cols-4"><Stat value={String(active.length)} label="ACTIVE JOURNEYS" /><Stat value={`${days} days`} label="DAYS TO DEPARTURE" /><Stat value={`${packed} / ${totalItems}`} label="ITEMS STAMPED" /><Stat value={`${totalItems ? Math.round((packed / totalItems) * 100) : 0}%`} label="OVERALL CLEARANCE" /></div></section>
       <main className="mx-auto max-w-[1500px] px-5 py-14"><div className="flex items-end justify-between"><div><h2 className="font-serif text-3xl">Your Journeys</h2><p className="mt-2 font-mono text-xs tracking-[.15em] text-[#b18c6f]">{active.length} UPCOMING · SORTED BY DEPARTURE</p></div></div>{active.length ? <div className="mt-10 grid gap-7 md:grid-cols-2 xl:grid-cols-3">{active.map((journey) => <JourneyCard journey={journey} key={journey.id} onOpen={() => setSelected(journey)} />)}</div> : <EmptyState onNew={() => setShowNew(true)} />}</main>
     </>}
-    {page === "blueprints" && <Blueprints blueprints={blueprints} />}
+    {page === "blueprints" && <Blueprints blueprints={blueprints} onRename={renameBlueprint} onDelete={deleteBlueprint} />}
     {page === "passport" && <Passport traveler={traveler} journeys={completed} />}
-    {showNew && <NewJourney locations={locations} onClose={() => setShowNew(false)} onSubmit={createJourney} search={searchLocations} />}
-    {selected && <JourneyDetail journey={journeys.find((journey) => journey.id === selected.id) ?? selected} onClose={() => setSelected(null)} onAddItem={addItem} onQuickAdd={quickAddItem} onToggle={toggleItem} onRemoveItem={removeItem} onRemoveJourney={removeJourney} auth={auth} />}
+    {showNew && <NewJourney locations={locations} blueprints={blueprints} onClose={() => setShowNew(false)} onSubmit={createJourney} search={searchLocations} />}
+    {selected && <JourneyDetail journey={journeys.find((journey) => journey.id === selected.id) ?? selected} onClose={() => setSelected(null)} onAddItem={addItem} onQuickAdd={quickAddItem} onToggle={toggleItem} onRemoveItem={removeItem} onRemoveJourney={removeJourney} onSaveBlueprint={saveBlueprint} blueprints={blueprints} onApplyBlueprint={applyBlueprint} auth={auth} />}
     {stamp && <DepartureStamp destination={stamp.destination} onClose={() => { setStamp(null); setSelected(null); setPage("passport"); }} />}
   </div>;
 }
@@ -125,11 +159,44 @@ function Header({ page, setPage, onNew, onSignOut }: { page: "lounge" | "bluepri
 function Stat({ value, label }: { value: string; label: string }) { return <div><b className="font-serif text-4xl text-[#b08d57]">{value}</b><p className="mt-2 font-mono text-[10px] tracking-[.18em] text-[#b18c6f]">{label}</p></div>; }
 function EmptyState({ onNew }: { onNew: () => void }) { return <div className="mt-10 grid place-items-center border border-dashed border-[#b08d57] p-16 text-center"><Compass className="h-9 w-9 text-[#b08d57]" /><h3 className="mt-4 font-serif text-2xl">Your passport is waiting for its first stamp.</h3><button onClick={onNew} className="mt-5 bg-[#b08d57] px-5 py-3 text-xs font-bold tracking-wider">PLAN A JOURNEY</button></div>; }
 function JourneyCard({ journey, onOpen }: { journey: Journey; onOpen: () => void }) { const status = clearance(journey); return <motion.button whileHover={{ y: -5 }} onClick={onOpen} className="journey-photo-card text-left"><img src={imageFor(journey.destination)} alt={journey.destination} /><div className="photo-overlay" /><span className="flight-tag">✈ PW {journey.id.slice(-3).toUpperCase()}</span><span className={`status-tag ${status.colour}`}>{status.state}</span><div className="absolute bottom-24 left-6 text-white"><h3 className="font-serif text-4xl">{journey.title}</h3><p className="mt-1 font-mono text-sm">{flagFor(journey.destination)} {journey.destination} · {pretty(journey.type)}</p></div><div className="card-footer"><span><small>◷ DEPARTURE</small><b>{new Date(journey.departureAt).toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" })}</b></span><span className="text-right"><b className="font-serif text-3xl text-[#b08d57]">{status.percent}%</b><small>CLEARANCE</small></span></div></motion.button>; }
-function Blueprints({ blueprints }: { blueprints: Blueprint[] }) { return <main className="mx-auto max-w-[1500px] px-5 py-14"><h1 className="font-serif text-4xl">Travel Blueprints</h1><p className="mt-2 text-[#6f4e37]">Save a manifest once and take it with you everywhere.</p><div className="mt-9 grid gap-5 md:grid-cols-3">{blueprints.map((blueprint) => <article className="border border-[#d9cfbd] bg-white p-6" key={blueprint.id}><BookOpen className="text-[#b08d57]" /><p className="mt-6 text-xs tracking-wider text-[#8b1e3f]">{pretty(blueprint.type)}</p><h2 className="mt-2 font-serif text-2xl">{blueprint.name}</h2><p className="mt-3 text-sm text-slate-500">{blueprint.items.length} travel items</p></article>)}</div></main>; }
+function Blueprints({ blueprints, onRename, onDelete }: { blueprints: Blueprint[]; onRename: (blueprint: Blueprint) => void; onDelete: (blueprint: Blueprint) => void }) {
+  return <main className="mx-auto max-w-[1500px] px-5 py-14">
+    <h1 className="font-serif text-4xl">Travel Blueprints</h1>
+    <p className="mt-2 text-[#6f4e37]">Save a manifest once and take it with you everywhere.</p>
+    <div className="mt-9 grid gap-5 md:grid-cols-3">
+      {blueprints.map((blueprint) => <article className="border border-[#d9cfbd] bg-white p-6" key={blueprint.id}>
+        <BookOpen className="text-[#b08d57]" />
+        <p className="mt-6 text-xs tracking-wider text-[#8b1e3f]">{pretty(blueprint.type)}</p>
+        <h2 className="mt-2 font-serif text-2xl">{blueprint.name}</h2>
+        <p className="mt-3 text-sm text-slate-500">{blueprint.items.length} travel items</p>
+        <div className="mt-5 flex gap-4">
+          <button onClick={() => onRename(blueprint)} className="text-xs font-bold tracking-wider text-[#16345a]">RENAME</button>
+          <button onClick={() => onDelete(blueprint)} className="text-xs font-bold tracking-wider text-[#8b1e3f]">DELETE</button>
+        </div>
+      </article>)}
+      {!blueprints.length && <p className="col-span-full py-12 text-center text-slate-500">No blueprints yet — save a manifest to create your first one.</p>}
+    </div>
+  </main>;
+}
 function Passport({ traveler, journeys }: { traveler: Traveler; journeys: Journey[] }) { return <main className="mx-auto max-w-[1100px] px-5 py-14"><p className="font-mono text-xs tracking-[.2em] text-[#a47e40]">TRAVEL DOCUMENT · {traveler.name.toUpperCase()}</p><h1 className="mt-2 font-serif text-4xl">My Passport</h1><p className="mt-2 text-[#6f4e37]">A collection of every cleared journey.</p><div className="passport-page mt-8 grid gap-8 p-8 sm:grid-cols-2">{journeys.map((journey) => <article className="passport-stamp-card" key={journey.id}><img src={imageFor(journey.destination)} alt="" /><div className="passport-stamp-shade" /><div className="relative z-10 text-center text-white"><span className="text-5xl">{flagFor(journey.destination)}</span><p className="mt-4 font-mono text-[10px] font-bold tracking-[.24em]">ENTRY STAMP · CLEARED</p><h2 className="mt-2 font-serif text-4xl">{journey.destination}</h2></div></article>)}{!journeys.length && <p className="col-span-full py-12 text-center text-slate-500">Clear a full manifest to earn your first passport stamp.</p>}</div></main>; }
-function NewJourney({ onClose, onSubmit, locations, search }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; locations: Location[]; search: (query: string) => void }) { return <div className="modal"><form onSubmit={onSubmit} className="modal-card"><button type="button" onClick={onClose} className="float-right" aria-label="Close"><X /></button><p className="text-xs tracking-[.2em] text-[#8b1e3f]">NEW ITINERARY</p><h2 className="mt-2 font-serif text-3xl">Plan a Journey</h2><div className="mt-7 grid gap-4 sm:grid-cols-2"><input className="input sm:col-span-2" name="title" required placeholder="Journey title" /><input className="input sm:col-span-2" name="destination" list="locations" required placeholder="Type a city or destination" onChange={(event) => void search(event.target.value)} /><datalist id="locations">{locations.map((location) => <option key={location.label} value={location.label} />)}</datalist><select name="type" className="input">{journeyTypes.map((type) => <option key={type}>{type}</option>)}</select><input className="input" type="datetime-local" name="departureAt" required /><input className="input sm:col-span-2" type="datetime-local" name="returnAt" /><button className="mt-2 bg-[#b08d57] py-3 text-xs font-bold tracking-wider text-[#102841] sm:col-span-2">ISSUE JOURNEY PASSPORT</button></div></form></div>; }
-
-function JourneyDetail({ journey, onClose, onAddItem, onQuickAdd, onToggle, onRemoveItem, onRemoveJourney, auth }: { journey: Journey; onClose: () => void; onAddItem: (event: FormEvent<HTMLFormElement>) => void; onQuickAdd: (name: string) => void; onToggle: (item: Item) => void; onRemoveItem: (item: Item) => void; onRemoveJourney: () => void; auth: Record<string, string> }) {
+function NewJourney({ onClose, onSubmit, locations, blueprints, search }: { onClose: () => void; onSubmit: (event: FormEvent<HTMLFormElement>) => void; locations: Location[]; blueprints: Blueprint[]; search: (query: string) => void }) {
+  return <div className="modal"><form onSubmit={onSubmit} className="modal-card">
+    <button type="button" onClick={onClose} className="float-right" aria-label="Close"><X /></button>
+    <p className="text-xs tracking-[.2em] text-[#8b1e3f]">NEW ITINERARY</p>
+    <h2 className="mt-2 font-serif text-3xl">Plan a Journey</h2>
+    <div className="mt-7 grid gap-4 sm:grid-cols-2">
+      <input className="input sm:col-span-2" name="title" required placeholder="Journey title" />
+      <input className="input sm:col-span-2" name="destination" list="locations" required placeholder="Type a city or destination" onChange={(event) => void search(event.target.value)} />
+      <datalist id="locations">{locations.map((location) => <option key={location.label} value={location.label} />)}</datalist>
+      <select name="type" className="input">{journeyTypes.map((type) => <option key={type}>{type}</option>)}</select>
+      <select name="blueprintId" className="input"><option value="">No blueprint — start blank</option>{blueprints.map((blueprint) => <option key={blueprint.id} value={blueprint.id}>{blueprint.name}</option>)}</select>
+      <input className="input" type="datetime-local" name="departureAt" required />
+      <input className="input sm:col-span-2" type="datetime-local" name="returnAt" />
+      <button className="mt-2 bg-[#b08d57] py-3 text-xs font-bold tracking-wider text-[#102841] sm:col-span-2">ISSUE JOURNEY PASSPORT</button>
+    </div>
+  </form></div>;
+}
+function JourneyDetail({ journey, onClose, onAddItem, onQuickAdd, onToggle, onRemoveItem, onRemoveJourney, onSaveBlueprint, blueprints, onApplyBlueprint, auth }: { journey: Journey; onClose: () => void; onAddItem: (event: FormEvent<HTMLFormElement>) => void; onQuickAdd: (name: string) => void; onToggle: (item: Item) => void; onRemoveItem: (item: Item) => void; onRemoveJourney: () => void; onSaveBlueprint: (journeyId: string) => void; blueprints: Blueprint[]; onApplyBlueprint: (blueprintId: string, journeyId: string) => void; auth: Record<string, string> }) {
   const [tab, setTab] = useState<"manifest" | "info" | "advisories">("manifest");
   const [weather, setWeather] = useState<Weather | null>(null);
   const [weatherError, setWeatherError] = useState("");
@@ -156,7 +223,34 @@ function JourneyDetail({ journey, onClose, onAddItem, onQuickAdd, onToggle, onRe
     };
   }, [journey.destination, journey.departureAt, auth]);
 
-  return <div className="fixed inset-0 z-40 overflow-auto bg-[#f5f1e8]"><section className="detail-hero"><img src={imageFor(journey.destination)} alt="" /><div className="detail-shade" /><button onClick={onClose} className="absolute left-7 top-7 font-mono text-sm tracking-wider text-white">← DEPARTURE LOUNGE</button><div className="absolute right-7 top-7 grid h-20 w-20 place-items-center rounded-full border-4 border-[#b08d57] bg-[#16345a]/60 font-mono text-lg text-[#d6aa62]">{status.percent}%<small className="block text-[9px]">CLEARED</small></div><div className="absolute bottom-8 left-7 text-white"><p className="font-mono text-sm tracking-[.16em] text-[#d6aa62]">✈ PW {journey.id.slice(-3).toUpperCase()} · GATE {airportCode(journey.destination)}2 · TERMINAL T2F</p><h1 className="mt-3 font-serif text-5xl">{journey.title}</h1><p className="mt-2 font-mono text-sm">{flagFor(journey.destination)} {journey.destination} · ◷ {new Date(journey.departureAt).toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" })}</p></div></section><nav className="border-b border-[#d9cfbd] bg-[#f8f6f0]"><div className="mx-auto flex max-w-[1440px] gap-3 px-4 sm:gap-8 sm:px-7">{(["manifest", "info", "advisories"] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`detail-tab ${tab === key ? "active" : ""}`}>{key === "manifest" ? "▧ MANIFEST" : key === "info" ? "⌖ JOURNEY INFO" : "☁ ADVISORIES"}</button>)}</div></nav><main className="mx-auto max-w-[1450px] px-4 py-10 sm:px-7"><AnimatePresence mode="wait"><motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .2 }}>{tab === "manifest" ? <Manifest journey={journey} groups={groups} onAddItem={onAddItem} onToggle={onToggle} onRemoveItem={onRemoveItem} onRemoveJourney={onRemoveJourney} /> : tab === "info" ? <JourneyInfo journey={journey} progress={status.percent} /> : <WeatherDashboard weather={weather} error={weatherError} onAdd={onQuickAdd} />}</motion.div></AnimatePresence></main></div>;
+  return <div className="fixed inset-0 z-40 overflow-auto bg-[#f5f1e8]"><section className="detail-hero"><img src={imageFor(journey.destination)} alt="" /><div className="detail-shade" /><button onClick={onClose} className="absolute left-7 top-7 font-mono text-sm tracking-wider text-white">← DEPARTURE LOUNGE</button><div className="absolute right-7 top-7 grid h-20 w-20 place-items-center rounded-full border-4 border-[#b08d57] bg-[#16345a]/60 font-mono text-lg text-[#d6aa62]">{status.percent}%<small className="block text-[9px]">CLEARED</small></div><div className="absolute bottom-8 left-7 text-white"><p className="font-mono text-sm tracking-[.16em] text-[#d6aa62]">✈ PW {journey.id.slice(-3).toUpperCase()} · GATE {airportCode(journey.destination)}2 · TERMINAL T2F</p><h1 className="mt-3 font-serif text-5xl">{journey.title}</h1><p className="mt-2 font-mono text-sm">{flagFor(journey.destination)} {journey.destination} · ◷ {new Date(journey.departureAt).toLocaleDateString(undefined, { day: "2-digit", month: "long", year: "numeric" })}</p></div></section><nav className="border-b border-[#d9cfbd] bg-[#f8f6f0]"><div className="mx-auto flex max-w-[1440px] gap-3 px-4 sm:gap-8 sm:px-7">{(["manifest", "info", "advisories"] as const).map((key) => <button key={key} onClick={() => setTab(key)} className={`detail-tab ${tab === key ? "active" : ""}`}>{key === "manifest" ? "▧ MANIFEST" : key === "info" ? "⌖ JOURNEY INFO" : "☁ ADVISORIES"}</button>)}</div></nav><main className="mx-auto max-w-[1450px] px-4 py-10 sm:px-7"><AnimatePresence mode="wait"><motion.div key={tab} initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }} transition={{ duration: .2 }}>{tab === "manifest" ? <Manifest journey={journey} groups={groups} onAddItem={onAddItem} onToggle={onToggle} onRemoveItem={onRemoveItem} onRemoveJourney={onRemoveJourney} onSaveBlueprint={() => onSaveBlueprint(journey.id)} blueprints={blueprints} onApplyBlueprint={(blueprintId) => onApplyBlueprint(blueprintId, journey.id)} /> : tab === "info" ? <JourneyInfo journey={journey} progress={status.percent} /> : <WeatherDashboard weather={weather} error={weatherError} onAdd={onQuickAdd} />}</motion.div></AnimatePresence></main></div>;
 }
-function Manifest({ journey, groups, onAddItem, onToggle, onRemoveItem, onRemoveJourney }: { journey: Journey; groups: Record<string, Item[]>; onAddItem: (event: FormEvent<HTMLFormElement>) => void; onToggle: (item: Item) => void; onRemoveItem: (item: Item) => void; onRemoveJourney: () => void }) { const done = journey.items.filter((item) => item.isStamped).length; return <><div className="flex flex-wrap items-end justify-between gap-4"><div><h2 className="font-serif text-3xl">Packing Manifest</h2><p className="mt-2 font-mono text-sm tracking-wider text-[#b18c6f]">{done} OF {journey.items.length} ITEMS STAMPED · {journey.items.length - done} ITEMS REMAINING</p></div><button onClick={onRemoveJourney} className="border border-[#8b1e3f]/40 px-4 py-3 text-xs font-bold tracking-wider text-[#8b1e3f]">REMOVE JOURNEY</button></div><form onSubmit={onAddItem} className="manifest-add-row mt-6"><input className="input manifest-add-input" name="name" placeholder="Type your travel item here…" required /><select className="input manifest-category" name="category">{categories.map((category) => <option key={category} value={category}>{pretty(category)}</option>)}</select><button className="bg-[#16345a] px-5 text-3xl text-white" aria-label="Add item"><Plus /></button></form><div className="mt-7 space-y-5">{Object.entries(groups).map(([category, items]) => <section key={category} className="border border-[#d9cfbd] bg-[#fbfaf6]"><header className="flex items-center justify-between bg-[#f0eee8] px-6 py-4"><h3 className="font-mono text-sm font-bold tracking-[.16em] text-[#16345a]">▣ {category.toUpperCase()} <span className="ml-2 text-[#b18c6f]">{items.filter((item) => item.isStamped).length}/{items.length}</span></h3></header>{items.map((item) => <div key={item.id} className={`flex items-center gap-4 border-t border-[#e6e0d4] px-6 py-4 ${item.isStamped ? "bg-emerald-50/70" : ""}`}><button onClick={() => void onToggle(item)} className={`grid h-7 w-7 place-items-center rounded-sm border ${item.isStamped ? "border-emerald-500 bg-emerald-500 text-white" : "border-[#cfc5b5]"}`}>{item.isStamped && <Check className="h-4 w-4" />}</button><span className={`font-serif text-xl ${item.isStamped ? "text-[#8e8b82] line-through" : "text-[#16345a]"}`}>{item.name}</span>{!item.isStamped && <span className="border border-red-300 px-2 py-1 text-[10px] font-bold tracking-wider text-red-500">ESSENTIAL</span>}<button onClick={() => void onRemoveItem(item)} className="ml-auto text-slate-400 hover:text-[#8b1e3f]" aria-label={`Remove ${item.name}`}><Trash2 className="h-4 w-4" /></button></div>)}</section>)}{!journey.items.length && <div className="border border-dashed border-[#b08d57] py-12 text-center text-slate-500">Your manifest is ready to be filled.</div>}</div></>; }
+function Manifest({ journey, groups, onAddItem, onToggle, onRemoveItem, onRemoveJourney, onSaveBlueprint, blueprints, onApplyBlueprint }: { journey: Journey; groups: Record<string, Item[]>; onAddItem: (event: FormEvent<HTMLFormElement>) => void; onToggle: (item: Item) => void; onRemoveItem: (item: Item) => void; onRemoveJourney: () => void; onSaveBlueprint: () => void; blueprints: Blueprint[]; onApplyBlueprint: (blueprintId: string) => void }) {
+  const done = journey.items.filter((item) => item.isStamped).length;
+  const [applyId, setApplyId] = useState("");
+  return <>
+    <div className="flex flex-wrap items-end justify-between gap-4">
+      <div><h2 className="font-serif text-3xl">Packing Manifest</h2><p className="mt-2 font-mono text-sm tracking-wider text-[#b18c6f]">{done} OF {journey.items.length} ITEMS STAMPED · {journey.items.length - done} ITEMS REMAINING</p></div>
+      <div className="flex flex-wrap items-center gap-3">
+        {blueprints.length > 0 && <>
+          <select className="input" value={applyId} onChange={(event) => setApplyId(event.target.value)}>
+            <option value="">Apply a blueprint…</option>
+            {blueprints.map((blueprint) => <option key={blueprint.id} value={blueprint.id}>{blueprint.name}</option>)}
+          </select>
+          <button
+            disabled={!applyId}
+            onClick={() => { if (!applyId) return; onApplyBlueprint(applyId); setApplyId(""); }}
+            className="border border-[#16345a] px-4 py-3 text-xs font-bold tracking-wider text-[#16345a] disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            APPLY
+          </button>
+        </>}
+        <button onClick={onSaveBlueprint} className="border border-[#b08d57] px-4 py-3 text-xs font-bold tracking-wider text-[#16345a]">SAVE AS BLUEPRINT</button>
+        <button onClick={onRemoveJourney} className="border border-[#8b1e3f]/40 px-4 py-3 text-xs font-bold tracking-wider text-[#8b1e3f]">REMOVE JOURNEY</button>
+      </div>
+    </div>
+    <form onSubmit={onAddItem} className="manifest-add-row mt-6"><input className="input manifest-add-input" name="name" placeholder="Type your travel item here…" required /><select className="input manifest-category" name="category">{categories.map((category) => <option key={category} value={category}>{pretty(category)}</option>)}</select><button className="bg-[#16345a] px-5 text-3xl text-white" aria-label="Add item"><Plus /></button></form>
+    <div className="mt-7 space-y-5">{Object.entries(groups).map(([category, items]) => <section key={category} className="border border-[#d9cfbd] bg-[#fbfaf6]"><header className="flex items-center justify-between bg-[#f0eee8] px-6 py-4"><h3 className="font-mono text-sm font-bold tracking-[.16em] text-[#16345a]">▣ {category.toUpperCase()} <span className="ml-2 text-[#b18c6f]">{items.filter((item) => item.isStamped).length}/{items.length}</span></h3></header>{items.map((item) => <div key={item.id} className={`flex items-center gap-4 border-t border-[#e6e0d4] px-6 py-4 ${item.isStamped ? "bg-emerald-50/70" : ""}`}><button onClick={() => void onToggle(item)} className={`grid h-7 w-7 place-items-center rounded-sm border ${item.isStamped ? "border-emerald-500 bg-emerald-500 text-white" : "border-[#cfc5b5]"}`}>{item.isStamped && <Check className="h-4 w-4" />}</button><span className={`font-serif text-xl ${item.isStamped ? "text-[#8e8b82] line-through" : "text-[#16345a]"}`}>{item.name}</span>{!item.isStamped && <span className="border border-red-300 px-2 py-1 text-[10px] font-bold tracking-wider text-red-500">ESSENTIAL</span>}<button onClick={() => void onRemoveItem(item)} className="ml-auto text-slate-400 hover:text-[#8b1e3f]" aria-label={`Remove ${item.name}`}><Trash2 className="h-4 w-4" /></button></div>)}</section>)}{!journey.items.length && <div className="border border-dashed border-[#b08d57] py-12 text-center text-slate-500">Your manifest is ready to be filled.</div>}</div>
+  </>;
+}
 function JourneyInfo({ journey, progress }: { journey: Journey; progress: number }) { return <section className="detail-grid"><article><small>DESTINATION</small><h2>{flagFor(journey.destination)} {journey.destination}</h2><p>Your selected {pretty(journey.type).toLowerCase()} journey.</p></article><article><small>DEPARTURE</small><h2>{new Date(journey.departureAt).toLocaleDateString(undefined, { weekday: "long", day: "numeric", month: "long" })}</h2><p>Boarding gate {airportCode(journey.destination)}2 · Terminal T2F</p></article><article><small>MANIFEST STATUS</small><h2>{progress}% cleared</h2><p>{journey.items.filter((item) => !item.isStamped).length} travel items remain.</p></article></section>; }
