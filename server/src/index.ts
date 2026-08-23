@@ -10,7 +10,11 @@ import locationsRouter from "./routes/locations.js";
 if (!process.env.JWT_SECRET) throw new Error("JWT_SECRET is required. Copy .env.example to .env first.");
 
 const app = express();
-app.use(cors({ origin: process.env.CLIENT_ORIGIN ?? "http://localhost:5173" }));
+const allowedOrigins = [
+  "http://localhost:5173",
+  "https://packwise-client.vercel.app",
+];
+app.use(cors({ origin: allowedOrigins }));
 app.use(express.json());
 app.get("/api/health", (_req, res) => res.json({ status: "cleared", service: "PackWise API" }));
 app.use("/api/auth", authRouter);
