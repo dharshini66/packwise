@@ -8,6 +8,7 @@ const router = Router();
 const journeyInput = z.object({
   title: z.string().trim().min(2).max(80),
   destination: z.string().trim().min(2).max(80),
+  origin: z.string().trim().min(2).max(80).nullable().optional(),
   type: z.nativeEnum(JourneyType),
   departureAt: z.string().datetime(),
   returnAt: z.string().datetime().nullable().optional(),
@@ -33,6 +34,18 @@ router.post("/", async (req: AuthRequest, res) => {
   if (!result.success) return res.status(400).json({ message: "Please complete each journey detail." });
   const { blueprintId, ...data } = result.data;
 
+  const departureDate = new Date(data.departureAt);
+  if (departureDate < new Date()) {
+    return res.status(400).json({ message: "The departure date must be in the future." });
+  }
+
+  if (data.returnAt) {
+    const returnDate = new Date(data.returnAt);
+    if (returnDate <= departureDate) {
+      return res.status(400).json({ message: "The return date must be after the departure date." });
+    }
+  }
+
   let itemsToCreate: { name: string; category: ItemCategory; quantity: number }[] = [];
   if (blueprintId) {
     const blueprint = await prisma.blueprint.findFirst({
@@ -46,7 +59,7 @@ router.post("/", async (req: AuthRequest, res) => {
   const journey = await prisma.journey.create({
     data: {
       ...data,
-      departureAt: new Date(data.departureAt),
+      departureAt: departureDate,
       returnAt: data.returnAt ? new Date(data.returnAt) : null,
       userId: req.userId!,
       items: itemsToCreate.length ? { create: itemsToCreate } : undefined,

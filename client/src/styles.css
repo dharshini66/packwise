@@ -23,7 +23,7 @@
 .board-row { display:grid; grid-template-columns:2fr 1fr 1fr 1.3fr .4fr; gap:1rem; align-items:center; padding:.78rem 1.5rem; font-family:ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:.13em; font-size:.87rem; }
 .board-label { color:#b18c6f; font-size:.68rem; border-bottom:1px solid rgba(255,255,255,.16); }
 .board-flight { width:100%; color:#eee6d7; text-align:left; border-bottom:1px solid rgba(255,255,255,.09); }
-.board-flight:hover { background:rgba(120,161,203,.19); }.board-flight span:nth-child(2),.board-flight span:nth-child(4) { color:#b5c0ce; }.board-flight span:last-child { color:#d6aa62; }.green { color:#19dca4!important; }.gold { color:#ffd035!important; }.muted { color:#8795a7!important; }
+.board-flight:hover { background:rgba(120,161,203,.19); }.board-flight span:nth-child(2),.board-flight span:nth-child(4) { color:#b5c0ce; }.board-flight span:last-child { color:#d6aa62; }.green { color:#10B981!important; }.gold { color:#B08A4A!important; }.red { color:#EF4444!important; }.muted { color:#6B7280!important; }
 .board-flight span:nth-child(2) { animation: board-time-flicker 4s steps(2,end) infinite; }.board-flight:nth-child(3n) span:nth-child(3) { animation: board-time-flicker 2.7s steps(2,end) infinite; }
 @keyframes board-time-flicker { 0%,92%,100% { opacity:1; transform:translateY(0); } 94% { opacity:.45; transform:translateY(1px); } 96% { opacity:1; transform:translateY(-1px); } }
 .flip-time { display:inline-flex; align-items:center; gap:1px; color:#e6ecf2; perspective:180px; font-variant-numeric:tabular-nums; }.flip-time b { display:inline-grid; min-width:.7em; place-items:center; transform-origin:50% 0; border-top:1px solid rgba(255,255,255,.13); border-bottom:1px solid rgba(0,0,0,.5); background:linear-gradient(#284d74 0 48%,#142f4e 49% 52%,#203f62 53% 100%); box-shadow:inset 0 0 8px rgba(0,0,0,.18); }.flip-time i { font-style:normal; color:#b5c0ce; animation:colon-blink 1s steps(1,end) infinite; } @keyframes colon-blink { 50% { opacity:.35; } }
@@ -39,3 +39,267 @@
 .detail-hero + nav + main > section:has(> h2.font-serif) > .detail-grid { clear:both; margin-top:2.5rem; grid-template-columns:1fr; }
 .detail-hero + nav + main > section:has(> h2.font-serif) > .detail-grid article { display:flex; align-items:center; justify-content:space-between; border-color:#ddceb7; background:#f8f1e4; padding:1.25rem; }
 .detail-hero + nav + main > section:has(> h2.font-serif) > .detail-grid article::after { content:"＋"; font-size:1.3rem; color:#a47e40; }
+
+/* ------------------------- Dark Mode Overrides ------------------------- */
+.dark body {
+  background-color: #0b132b;
+  color: #eee6d7;
+}
+
+.dark .boarding-pass {
+  background-color: #132238;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark .boarding-pass h3, 
+.dark .boarding-pass p, 
+.dark .boarding-pass div {
+  color: #eee6d7;
+}
+
+.dark .boarding-pass .relative {
+  background-color: #1a2f4c;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark .boarding-pass .absolute {
+  background-color: #0b132b;
+}
+
+.dark .card-footer {
+  background-color: #132238;
+  color: #eee6d7;
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+
+.dark .stat-card {
+  background-color: #132238;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark .stat-card b {
+  color: #b08d57;
+}
+
+.dark .stat-card span {
+  color: rgba(238, 230, 215, 0.6);
+}
+
+.dark .passport-page {
+  background-image: linear-gradient(rgba(176,141,87,.035) 1px, transparent 1px), linear-gradient(90deg, rgba(176,141,87,.035) 1px, transparent 1px);
+}
+
+.dark .modal-card {
+  background-color: #132238;
+  color: #eee6d7;
+  border: 1px solid rgba(255,255,255,0.12);
+}
+
+.dark .input {
+  background-color: #101c2e;
+  border-color: rgba(255,255,255,0.15);
+  color: #eee6d7;
+}
+
+.dark .input:focus {
+  border-color: #b08d57;
+  box-shadow: 0 0 0 2px rgba(176,141,87,.12);
+}
+
+.dark .fixed.inset-0.z-40 {
+  background-color: #0b132b;
+  color: #eee6d7;
+}
+
+.dark .detail-tab {
+  color: rgba(238, 230, 215, 0.7);
+}
+
+.dark .detail-tab.active {
+  border-color: #b08d57;
+  color: #b08d57;
+}
+
+.dark nav {
+  background-color: #101c2e;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark section.border {
+  background-color: #132238;
+  border-color: rgba(255,255,255,0.08);
+}
+
+.dark section header {
+  background-color: #101c2e !important;
+}
+
+.dark section div.border-t {
+  border-color: rgba(255,255,255,0.08) !important;
+}
+
+.dark section div.bg-emerald-50\/70 {
+  background-color: rgba(16,185,129,0.08) !important;
+}
+
+.dark section span.text-\[\#8e8b82\] {
+  color: rgba(238,230,215,0.45) !important;
+}
+
+.dark .detail-grid article {
+  border-color: rgba(255,255,255,0.08);
+  background-color: #132238;
+}
+
+.dark .detail-grid h2 {
+  color: #eee6d7;
+}
+
+.dark .detail-grid p {
+  color: #b08d57;
+}
+
+.dark .weather-hero {
+  border-color: rgba(255,255,255,0.08);
+  background: linear-gradient(115deg,#132238,#101c2e);
+}
+
+.dark .weather-hero h2 {
+  color: #eee6d7;
+}
+
+.dark .weather-hero p {
+  color: #b08d57;
+}
+
+.dark .weather-additions button {
+  border-color: rgba(255,255,255,0.08);
+  background-color: #132238;
+  color: #b08d57;
+}
+
+.dark .weather-additions button:hover {
+  background-color: #1a2f4c;
+}
+
+.dark .weather-additions b {
+  color: #eee6d7;
+}
+
+.dark .weather-additions small {
+  color: rgba(238, 230, 215, 0.6);
+}
+
+@media print {
+  /* Hide all root children to prevent dashboard background overlap */
+  #root > div > * {
+    display: none !important;
+  }
+  
+  /* Show only the active journey details modal overlay */
+  #root > div > .journey-detail-modal {
+    display: block !important;
+    position: relative !important;
+    inset: auto !important;
+    background: white !important;
+    overflow: visible !important;
+    color: black !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+  }
+  
+  /* Hide interactive layout elements within the modal during print */
+  .journey-detail-modal header,
+  .journey-detail-modal nav,
+  .journey-detail-modal button,
+  .journey-detail-modal form,
+  .journey-detail-modal select,
+  .journey-detail-modal .fixed.bottom-5,
+  .journey-detail-modal .weather-advisory,
+  .journey-detail-modal .weather-notes,
+  .journey-detail-modal .modal-card > button {
+    display: none !important;
+  }
+  
+  .detail-hero {
+    height: 180px !important;
+    background: #16345a !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+  
+  .detail-hero img {
+    opacity: 0.12 !important;
+  }
+  
+  .detail-hero h1 {
+    color: white !important;
+    font-size: 2.2rem !important;
+  }
+  
+  .detail-hero p {
+    color: #ffd035 !important;
+  }
+  
+  .detail-hero .absolute.right-7 {
+    display: none !important;
+  }
+  
+  main {
+    padding: 0 !important;
+    margin: 20px 0 !important;
+  }
+  
+  section {
+    page-break-inside: avoid;
+    margin-bottom: 20px;
+    border: 1px solid #ccc !important;
+    background: white !important;
+  }
+  
+  section header {
+    background: #f0eee8 !important;
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    padding: 8px 16px !important;
+    border-bottom: 1px solid #ccc !important;
+  }
+  
+  section header h3 {
+    color: black !important;
+  }
+  
+  section div {
+    border-top: 1px solid #eee !important;
+    background: white !important;
+    padding: 8px 16px !important;
+    display: flex !important;
+    align-items: center !important;
+  }
+  
+  section span {
+    text-decoration: none !important;
+    color: black !important;
+  }
+  
+  section span.line-through {
+    text-decoration: line-through !important;
+    opacity: 0.6 !important;
+  }
+  
+  section div::before {
+    content: "[ ]" !important;
+    font-family: monospace !important;
+    margin-right: 10px !important;
+    font-size: 14px !important;
+    font-weight: bold !important;
+  }
+  
+  section div.bg-emerald-50\/70::before {
+    content: "[x]" !important;
+  }
+}
+

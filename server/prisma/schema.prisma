@@ -15,6 +15,13 @@ enum JourneyType {
   INTERNATIONAL
   FAMILY
   CUSTOM
+  ROAD_TRIP
+  CRUISE
+  SKI_TRIP
+  SAFARI
+  BACKPACKING
+  SOLO
+  HONEYMOON
 }
 
 enum ItemCategory {
@@ -41,6 +48,7 @@ model Journey {
   id          String       @id @default(cuid())
   title       String
   destination String
+  origin      String?
   type        JourneyType  @default(CUSTOM)
   departureAt DateTime
   returnAt    DateTime?
