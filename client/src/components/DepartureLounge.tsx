@@ -345,7 +345,14 @@ export default function DepartureLounge({ traveler, onSignOut, theme, onToggleTh
   // Resolve dynamic country insights for destination
   const resolveInsights = async (destination: string, origin?: string | null) => {
     const key = destination.trim();
-    if (insights[key]) return;
+    const cached = insights[key];
+    const isPlaceholder = cached && (
+      cached.currencyCode === "USD" && cached.currencyName === "United States Dollar" ||
+      cached.currencyCode === "EUR" && cached.notes?.includes("Travel essentials prepared") ||
+      !cached.currencyName
+    );
+    if (cached && !isPlaceholder) return;
+    
     const originParam = origin ? `&origin=${encodeURIComponent(origin.trim())}` : "";
     try {
       const res = await request<any>(`/insights?destination=${encodeURIComponent(key)}${originParam}`, { headers: auth });
