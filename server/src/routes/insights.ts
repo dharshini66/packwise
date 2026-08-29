@@ -124,6 +124,8 @@ async function resolveLocationDetails(locStr: string) {
   };
 }
 
+import { lookupCountry } from "../lib/countries.js";
+
 router.get("/", requireAuth, async (req, res) => {
   const destination = String(req.query.destination ?? "").trim();
   const origin = String(req.query.origin ?? "New York, USA").trim();
@@ -155,25 +157,12 @@ router.get("/", requireAuth, async (req, res) => {
   const destCountry = destParts[destParts.length - 1]?.trim() || destCity;
 
   try {
-    const [originDetails, destDetails, countriesResponse] = await Promise.all([
+    const [originDetails, destDetails] = await Promise.all([
       resolveLocationDetails(origin),
-      resolveLocationDetails(destination),
-      fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(destCountry)}`)
+      resolveLocationDetails(destination)
     ]);
 
-    let currencyKey = "EUR";
-    let currencyName = "Euro";
-    let subregion = "this region";
-    let languages = "the local language";
-
-    if (countriesResponse.ok) {
-      const data = await countriesResponse.json();
-      const cData = data?.[0];
-      currencyKey = Object.keys(cData?.currencies ?? {})[0] || "EUR";
-      currencyName = cData?.currencies?.[currencyKey]?.name || "Euro";
-      subregion = cData?.subregion || cData?.region || "this region";
-      languages = Object.values(cData?.languages ?? {}).slice(0, 2).join(" or ") || "the local language";
-    }
+    const cData = lookupCountry(destCountry);
 
     const insights = {
       originCode: originDetails.code,
@@ -182,11 +171,11 @@ router.get("/", requireAuth, async (req, res) => {
       destinationCode: destDetails.code,
       destinationTimezone: destDetails.timezone,
       destinationTimezoneOffset: destDetails.offset,
-      currencyCode: currencyKey,
-      currencyName: currencyName,
+      currencyCode: cData.currencyCode,
+      currencyName: cData.currencyName,
       entryClearance: `Valid passport required for entry into ${destCountry}. Ensure your passport is valid for at least 3-6 months.`,
-      connectivity: `Mobile roaming covers ${destCountry} (${subregion}). Local eSIM/SIM cards are widely available at ${destCity} airports.`,
-      notes: `“Exploring ${destCity}. Route: ${originDetails.code} ➔ ${destDetails.code}. Accommodation in ${destCountry} booked. Local travel passes and itineraries prepared in ${languages}.”`
+      connectivity: `Mobile roaming covers ${destCountry} (${cData.subregion}). Local eSIM/SIM cards are widely available at ${destCity} airports.`,
+      notes: `“Exploring ${destCity}. Route: ${originDetails.code} ➔ ${destDetails.code}. Accommodation in ${destCountry} booked. Local travel passes and itineraries prepared in ${cData.language}.”`
     };
 
     insightsCache.set(cacheKey, { insights, expiresAt: Date.now() + 1000 * 60 * 60 * 24 }); // Cache for 24h

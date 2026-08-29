@@ -221,109 +221,18 @@ function getDestinationInsightsSync(country: string, timezone: string): Destinat
   return { ...(match ?? GENERIC_INSIGHTS), timezone: timezone || "Local time" };
 }
 
+import { lookupCountry } from "../lib/countries.js";
+
 async function getDestinationInsights(country: string, city: string, timezone: string): Promise<DestinationInsights> {
-  const normCountry = country.toLowerCase().trim();
-  const normCity = city.toLowerCase().trim();
-
-  let currency = "Check local currency before departure";
-  let language = "Local language may vary by region";
-  let powerPlug = "Verify plug type for this destination";
-  let emergencyNumber = "Check local emergency services number";
-  let transportTip = `Research local transit options in ${city} ahead of arrival.`;
-  let weatherTip = `Check seasonal weather averages for ${city} prior to packing.`;
-
-  try {
-    const countriesResponse = await fetch(`https://restcountries.com/v3.1/name/${encodeURIComponent(country)}`);
-    if (countriesResponse.ok) {
-      const data = await countriesResponse.json() as any;
-      const cData = data?.[0];
-      if (cData) {
-        // Extract currency
-        const currencyKey = Object.keys(cData?.currencies ?? {})[0];
-        if (currencyKey) {
-          const cName = cData.currencies[currencyKey].name || "Local currency";
-          currency = `${cName} (${currencyKey})`;
-        }
-        
-        // Extract languages
-        const langList = Object.values(cData?.languages ?? {});
-        if (langList.length > 0) {
-          language = langList.slice(0, 2).join(", ");
-        }
-
-        // Resolve Power Plug and Emergency Numbers based on RestCountries info
-        const officialName = (cData.name?.common ?? country).toLowerCase();
-        const region = (cData.region ?? "").toLowerCase();
-
-        if (officialName.includes("united states") || officialName.includes("canada") || officialName.includes("mexico") || officialName.includes("taiwan") || officialName.includes("philippines")) {
-          powerPlug = "Type A / B (120V, 60Hz)";
-          emergencyNumber = "911";
-        } else if (officialName.includes("japan")) {
-          powerPlug = "Type A (100V, 50/60Hz)";
-          emergencyNumber = "110 / 119";
-        } else if (officialName.includes("united kingdom") || officialName.includes("ireland") || officialName.includes("singapore") || officialName.includes("hong kong") || officialName.includes("malaysia") || officialName.includes("united arab emirates") || officialName.includes("cyprus")) {
-          powerPlug = "Type G (230V, 50Hz)";
-          emergencyNumber = "999 / 112";
-        } else if (officialName.includes("switzerland") || normCity.includes("basel") || normCountry.includes("schweiz")) {
-          powerPlug = "Type J (230V, 50Hz)";
-          emergencyNumber = "112 / 117";
-        } else if (officialName.includes("australia") || officialName.includes("new zealand") || officialName.includes("china") || officialName.includes("argentina")) {
-          powerPlug = "Type I (230V, 50Hz)";
-          emergencyNumber = officialName.includes("australia") || officialName.includes("new zealand") ? "000" : (officialName.includes("china") ? "110" : "911");
-        } else if (officialName.includes("india")) {
-          powerPlug = "Type C / D / M (230V, 50Hz)";
-          emergencyNumber = "112";
-        } else if (officialName.includes("south africa")) {
-          powerPlug = "Type D / M / N (230V, 50Hz)";
-          emergencyNumber = "10111";
-        } else if (officialName.includes("brazil")) {
-          powerPlug = "Type C / N (127V/220V, 60Hz)";
-          emergencyNumber = "190 / 192";
-        } else if (region.includes("europe")) {
-          powerPlug = "Type C / E / F (230V, 50Hz)";
-          emergencyNumber = "112";
-        } else {
-          powerPlug = "Type C / E / F (Standard Europlug)";
-          emergencyNumber = "112";
-        }
-
-        // Custom tips based on country
-        if (officialName.includes("japan")) {
-          transportTip = "Get a Suica or Pasmo card for trains and buses.";
-          weatherTip = "Summers are hot and humid; winters are mild but dry.";
-        } else if (officialName.includes("france")) {
-          transportTip = "The Metro is fast and covers most of Paris.";
-          weatherTip = "Expect mild weather with occasional rain year-round.";
-        } else if (officialName.includes("united kingdom")) {
-          transportTip = "An Oyster card covers the Tube, buses, and rail.";
-          weatherTip = "Pack layers — weather can change within the same day.";
-        } else if (officialName.includes("switzerland") || normCity.includes("basel")) {
-          transportTip = "Validate train tickets or get a Swiss Travel Pass.";
-          weatherTip = "Alpine climate — layer up for changing elevations.";
-        } else {
-          transportTip = `Public transit and taxis are widely available in ${city}.`;
-          weatherTip = `Check local seasonal averages for ${city} before packing.`;
-        }
-      }
-    }
-  } catch (err) {
-    console.error("RestCountries lookup failed in weather insights:", err);
-  }
-
-  // Fallback to static lookup if API is blocked or returned placeholders
-  if (currency.startsWith("Check")) {
-    const staticInsights = getDestinationInsightsSync(country, timezone);
-    return staticInsights;
-  }
-
+  const cData = lookupCountry(country || city);
   return {
-    currency,
-    language,
-    powerPlug,
+    currency: `${cData.currencyName} (${cData.currencyCode})`,
+    language: cData.language,
+    powerPlug: cData.powerPlug,
     timezone: timezone || "Local time",
-    emergencyNumber,
-    transportTip,
-    weatherTip,
+    emergencyNumber: cData.emergencyNumber,
+    transportTip: cData.transportTip.replace(/\${city}/g, city),
+    weatherTip: cData.weatherTip.replace(/\${city}/g, city).replace(/\${country}/g, country)
   };
 }
 
