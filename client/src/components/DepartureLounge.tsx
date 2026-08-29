@@ -1317,7 +1317,6 @@ function NewJourney({
               ))}
             </div>
 
-            {/* Inputs */}
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85 relative">
                 Origin City
@@ -1327,6 +1326,7 @@ function NewJourney({
                     shouldSuggestOriginRef.current = true;
                     setOriginCity(e.target.value);
                   }}
+                  onBlur={() => setTimeout(() => setOriginSuggestions([]), 200)}
                   required
                   placeholder="e.g. New York"
                   className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
@@ -1366,6 +1366,7 @@ function NewJourney({
                     setCity(e.target.value);
                     setTitle(`Trip to ${e.target.value}`);
                   }}
+                  onBlur={() => setTimeout(() => setCitySuggestions([]), 200)}
                   required
                   placeholder="e.g. Istanbul"
                   className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
