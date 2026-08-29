@@ -175,7 +175,49 @@ const GENERIC_INSIGHTS: Omit<DestinationInsights, "timezone"> = {
 };
 
 function getDestinationInsights(country: string, timezone: string): DestinationInsights {
-  const match = DESTINATION_INSIGHTS[country];
+  const normCountry = country.toLowerCase().trim();
+  
+  // 1. Direct Lookup or Sub-word match
+  let match = DESTINATION_INSIGHTS[country];
+  if (!match) {
+    for (const key in DESTINATION_INSIGHTS) {
+      if (normCountry.includes(key.toLowerCase()) || key.toLowerCase().includes(normCountry)) {
+        match = DESTINATION_INSIGHTS[key];
+        break;
+      }
+    }
+  }
+
+  // 2. Specific language and city/region translation fallbacks
+  if (!match) {
+    if (normCountry.includes("schweiz") || normCountry.includes("switzerland") || normCountry.includes("suisse") || normCountry.includes("basel")) {
+      match = { 
+        currency: "Swiss Franc (CHF)", 
+        language: "German, French, Italian", 
+        powerPlug: "Type J", 
+        emergencyNumber: "112 / 117", 
+        transportTip: "Get a Swiss Travel Pass for trains and boats.", 
+        weatherTip: "Alpine climate — variable conditions." 
+      };
+    } else if (normCountry.includes("japan") || normCountry.includes("japon") || normCountry.includes("tokyo")) {
+      match = DESTINATION_INSIGHTS["Japan"];
+    } else if (normCountry.includes("france") || normCountry.includes("paris")) {
+      match = DESTINATION_INSIGHTS["France"];
+    } else if (normCountry.includes("united kingdom") || normCountry.includes("uk") || normCountry.includes("england") || normCountry.includes("london")) {
+      match = DESTINATION_INSIGHTS["United Kingdom"];
+    } else if (normCountry.includes("united states") || normCountry.includes("usa") || normCountry.includes("america") || normCountry.includes("new york")) {
+      match = DESTINATION_INSIGHTS["United States"];
+    } else if (normCountry.includes("deutschland") || normCountry.includes("germany") || normCountry.includes("berlin")) {
+      match = DESTINATION_INSIGHTS["Germany"];
+    } else if (normCountry.includes("italia") || normCountry.includes("italy") || normCountry.includes("rome")) {
+      match = DESTINATION_INSIGHTS["Italy"];
+    } else if (normCountry.includes("españa") || normCountry.includes("spain") || normCountry.includes("madrid")) {
+      match = DESTINATION_INSIGHTS["Spain"];
+    } else if (normCountry.includes("india") || normCountry.includes("delhi") || normCountry.includes("mumbai") || normCountry.includes("goa")) {
+      match = DESTINATION_INSIGHTS["India"];
+    }
+  }
+
   return { ...(match ?? GENERIC_INSIGHTS), timezone: timezone || "Local time" };
 }
 
