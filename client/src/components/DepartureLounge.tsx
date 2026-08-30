@@ -272,6 +272,17 @@ export default function DepartureLounge({ traveler, onSignOut, theme, onToggleTh
     localStorage.setItem("packwise_insights", JSON.stringify(insights));
   }, [insights]);
 
+  // Automatic cache migration to clear legacy generic insights and fetch fresh API data
+  useEffect(() => {
+    const cacheVersion = localStorage.getItem("packwise_cache_version");
+    if (cacheVersion !== "2.0") {
+      localStorage.removeItem("packwise_insights");
+      localStorage.removeItem("packwise_image_urls");
+      localStorage.setItem("packwise_cache_version", "2.0");
+      window.location.reload();
+    }
+  }, []);
+
   const [locations, setLocations] = useState<Location[]>([]);
   const [stamp, setStamp] = useState<Journey | null>(null);
 
