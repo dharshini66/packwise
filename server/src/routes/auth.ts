@@ -26,7 +26,7 @@ router.post("/register", async (req, res) => {
   if (existing) return res.status(409).json({ message: "A traveler with this email already exists." });
 
   const user = await prisma.user.create({
-    data: { name, email, passwordHash: await bcrypt.hash(password, 12) },
+    data: { name, email, passwordHash: await bcrypt.hash(password, 10) },
     select: { id: true, name: true, email: true },
   });
   return res.status(201).json({ user, token: issueToken(user.id) });

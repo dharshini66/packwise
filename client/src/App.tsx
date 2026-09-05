@@ -39,6 +39,17 @@ function AuthCard({ onAuthenticated }: { onAuthenticated: (traveler: Traveler) =
   const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [wakingUp, setWakingUp] = useState(false);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    if (busy) {
+      timer = setTimeout(() => setWakingUp(true), 2500);
+    } else {
+      setWakingUp(false);
+    }
+    return () => clearTimeout(timer);
+  }, [busy]);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -138,6 +149,11 @@ function AuthCard({ onAuthenticated }: { onAuthenticated: (traveler: Traveler) =
         >
           {busy ? "Checking clearance…" : mode === "login" ? "Enter Departure Lounge" : "Create travel profile"}
         </button>
+        {busy && wakingUp && (
+          <p className="text-center text-xs font-mono text-[#b18c6f] dark:text-gold/80 animate-pulse">
+            ✈️ Connecting to server… (waking from standby)
+          </p>
+        )}
       </form>
       <p className="mt-6 text-center text-sm text-leather/70 dark:text-[#eee6d7]/60">
         {mode === "login" ? "New to PackWise?" : "Already registered?"}{" "}
@@ -166,6 +182,12 @@ export default function App() {
     if (saved) return saved;
     return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
   });
+
+  useEffect(() => {
+    // Pre-warm backend API as soon as visitor arrives on landing page
+    const apiHost = import.meta.env.DEV ? "http://localhost:4000/api" : "/api";
+    fetch(`${apiHost}/health`).catch(() => {});
+  }, []);
 
   useEffect(() => {
     const root = window.document.documentElement;

@@ -8,6 +8,8 @@ import weatherRouter from "./routes/weather.js";
 import locationsRouter from "./routes/locations.js";
 import imagesRouter from "./routes/images.js";
 import insightsRouter from "./routes/insights.js";
+import { prisma } from "./lib/prisma.js";
+import { seedDefaultBlueprints } from "./lib/seeds.js";
 
 const requiredEnv = ["DATABASE_URL", "JWT_SECRET", "VISUAL_CROSSING_API_KEY"];
 const missingEnv = requiredEnv.filter((env) => !process.env[env]);
@@ -59,11 +61,7 @@ app.use("/api/locations", locationsRouter);
 app.use("/api/images", imagesRouter);
 app.use("/api/insights", insightsRouter);
 
-import { prisma } from "./lib/prisma.js";
-import { seedDefaultBlueprints } from "./lib/seeds.js";
-
-void seedDefaultBlueprints(prisma).finally(() => {
-  app.listen(Number(process.env.PORT ?? 4000), () => {
-    console.log("PackWise API ready for departure on port " + (process.env.PORT ?? 4000));
-  });
+app.listen(Number(process.env.PORT ?? 4000), () => {
+  console.log("PackWise API ready for departure on port " + (process.env.PORT ?? 4000));
+  void seedDefaultBlueprints(prisma);
 });
