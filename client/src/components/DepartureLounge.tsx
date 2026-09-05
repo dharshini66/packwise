@@ -1150,6 +1150,7 @@ function NewJourney({
     setCity(selectedCity);
     setCountry(selectedCountry);
     setCitySuggestions([]);
+    setOriginSuggestions([]);
     setTitle(`Trip to ${selectedCity}`);
     onResolveImage(label, originCity.trim() ? `${originCity.trim()}, ${originCountry.trim()}` : null);
   };
@@ -1189,6 +1190,7 @@ function NewJourney({
     setOriginCity(selectedCity);
     setOriginCountry(selectedCountry);
     setOriginSuggestions([]);
+    setCitySuggestions([]);
     if (city.trim()) {
       onResolveImage(`${city.trim()}, ${country.trim()}`, label);
     }
@@ -1213,6 +1215,9 @@ function NewJourney({
   ];
 
   const handleQuickSelect = (q: typeof quickDestinations[number]) => {
+    shouldSuggestRef.current = false;
+    setCitySuggestions([]);
+    setOriginSuggestions([]);
     setCity(q.city);
     setCountry(q.country);
     setType(q.type);
@@ -1336,25 +1341,30 @@ function NewJourney({
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85 relative">
-                Origin City
-                <input
-                  value={originCity}
-                  onChange={(e) => {
-                    shouldSuggestOriginRef.current = true;
-                    setOriginCity(e.target.value);
-                  }}
-                  onBlur={() => setTimeout(() => setOriginSuggestions([]), 200)}
-                  required
-                  placeholder="e.g. New York"
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
-                />
+              <div className="relative z-30">
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Origin City
+                  <input
+                    value={originCity}
+                    onFocus={() => setCitySuggestions([])}
+                    onChange={(e) => {
+                      shouldSuggestOriginRef.current = true;
+                      setCitySuggestions([]);
+                      setOriginCity(e.target.value);
+                    }}
+                    onBlur={() => setTimeout(() => setOriginSuggestions([]), 250)}
+                    required
+                    placeholder="e.g. New York"
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
+                  />
+                </label>
                 {originSuggestions.length > 0 && (
-                  <ul className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#132238] shadow-lg z-50 text-left">
+                  <ul className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#132238] shadow-2xl z-50 text-left">
                     {originSuggestions.map((label) => (
                       <li key={label}>
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => handleSelectOriginSuggestion(label)}
                           className="w-full text-left px-4 py-2 text-xs hover:bg-[#f5f1e8] dark:hover:bg-[#101c2e] text-slate-700 dark:text-[#eee6d7]/90 transition-colors"
                         >
@@ -1364,37 +1374,44 @@ function NewJourney({
                     ))}
                   </ul>
                 )}
-              </label>
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
-                Origin Country
-                <input
-                  value={originCountry}
-                  onChange={(e) => setOriginCountry(e.target.value)}
-                  required
-                  placeholder="e.g. United States"
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85 relative">
-                Destination City
-                <input
-                  value={city}
-                  onChange={(e) => {
-                    shouldSuggestRef.current = true;
-                    setCity(e.target.value);
-                    setTitle(`Trip to ${e.target.value}`);
-                  }}
-                  onBlur={() => setTimeout(() => setCitySuggestions([]), 200)}
-                  required
-                  placeholder="e.g. Istanbul"
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
-                />
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Origin Country
+                  <input
+                    value={originCountry}
+                    onChange={(e) => setOriginCountry(e.target.value)}
+                    required
+                    placeholder="e.g. United States"
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
+                  />
+                </label>
+              </div>
+              <div className="relative z-20">
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Destination City
+                  <input
+                    value={city}
+                    onFocus={() => setOriginSuggestions([])}
+                    onChange={(e) => {
+                      shouldSuggestRef.current = true;
+                      setOriginSuggestions([]);
+                      setCity(e.target.value);
+                      setTitle(`Trip to ${e.target.value}`);
+                    }}
+                    onBlur={() => setTimeout(() => setCitySuggestions([]), 250)}
+                    required
+                    placeholder="e.g. Istanbul"
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e] w-full"
+                  />
+                </label>
                 {citySuggestions.length > 0 && (
-                  <ul className="absolute left-0 right-0 mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#132238] shadow-lg z-50 text-left">
+                  <ul className="absolute left-0 right-0 top-full mt-1 max-h-48 overflow-y-auto rounded-lg border border-slate-200 dark:border-white/10 bg-white dark:bg-[#132238] shadow-2xl z-50 text-left">
                     {citySuggestions.map((label) => (
                       <li key={label}>
                         <button
                           type="button"
+                          onMouseDown={(e) => e.preventDefault()}
                           onClick={() => handleSelectSuggestion(label)}
                           className="w-full text-left px-4 py-2 text-xs hover:bg-[#f5f1e8] dark:hover:bg-[#101c2e] text-slate-700 dark:text-[#eee6d7]/90 transition-colors"
                         >
@@ -1404,38 +1421,44 @@ function NewJourney({
                     ))}
                   </ul>
                 )}
-              </label>
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
-                Country
-                <input
-                  value={country}
-                  onChange={(e) => setCountry(e.target.value)}
-                  required
-                  placeholder="e.g. Turkey"
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
-                Departure Date
-                <input
-                  type="datetime-local"
-                  value={departureAt}
-                  onChange={(e) => setDepartureAt(e.target.value)}
-                  required
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
-                />
-              </label>
-              <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
-                Return Date (Optional)
-                <input
-                  type="datetime-local"
-                  value={returnAt}
-                  onChange={(e) => setReturnAt(e.target.value)}
-                  min={departureAt || new Date().toISOString().slice(0, 16)}
-                  className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
-                />
-              </label>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Country
+                  <input
+                    value={country}
+                    onChange={(e) => setCountry(e.target.value)}
+                    required
+                    placeholder="e.g. Turkey"
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
+                  />
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Departure Date
+                  <input
+                    type="datetime-local"
+                    value={departureAt}
+                    onChange={(e) => setDepartureAt(e.target.value)}
+                    required
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
+                  />
+                </label>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-leather dark:text-[#eee6d7]/85">
+                  Return Date (Optional)
+                  <input
+                    type="datetime-local"
+                    value={returnAt}
+                    onChange={(e) => setReturnAt(e.target.value)}
+                    min={departureAt || new Date().toISOString().slice(0, 16)}
+                    className="mt-1 input rounded-xl border border-leather/20 dark:border-white/15 bg-parchment dark:bg-[#101c2e]"
+                  />
+                </label>
+              </div>
             </div>
 
             {/* Action buttons */}
