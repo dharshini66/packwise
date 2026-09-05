@@ -1,0 +1,21 @@
+name: Keep Render Backend Awake
+
+on:
+  schedule:
+    # Runs every 14 minutes
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions tab
+
+jobs:
+  ping-render:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping PackWise API Health Check
+        run: |
+          response=$(curl -s -o /dev/null -w "%{http_code}" "https://packwise-fgci.onrender.com/api/health")
+          echo "HTTP Status Code: $response"
+          if [ "$response" -eq 200 ]; then
+            echo "Render backend is alive and healthy!"
+          else
+            echo "Render backend responded with status: $response (may be waking up)"
+          fi
